@@ -1,39 +1,51 @@
+
 import requests
 import csv
 
-# Replace 'YOUR_API_KEY' with your OpenWeatherMap API key
-api_key = 'YOUR_API_KEY'
-location = 'New York, US'  # Replace with the location you want to fetch weather data for
-url = f'http://api.openweathermap.org/data/2.5/weather?q={location}&appid={api_key}'
+# Constants
+API_KEY = "ln0vq8liSoorAF13jBUdyyiIFelqXbm8"  
+BASE_URL = "https://api.nytimes.com/svc/books/v3/lists/current"
+CATEGORY = "hardcover-fiction"  
+OUTPUT_FILE = "nytimes_best_sellers.csv"  
 
-# Make an API request
-response = requests.get(url)
+# Fetch data from the API
+def fetch_best_sellers(api_key, category):
+    url = f"{BASE_URL}/{category}.json"
+    params = {"api-key": api_key}
+    response = requests.get(url, params=params)
 
-# Check if the request was successful
-if response.status_code == 200:
-    data = response.json()
+    if response.status_code == 200:
+        return response.json()['results']['books']
+    else:
+        print(f"Error: {response.status_code}, {response.text}")
+        return []
     
-    # Extract relevant weather information
-    temperature = data['main']['temp']
-    humidity = data['main']['humidity']
-    weather_description = data['weather'][0]['description']
+# Write data to a CSV file
+def write_to_csv(data, filename):
+    with open(filename, mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        # Write header
+        writer.writerow(["Rank", "Title", "Author", "Publisher", "Description"])
+        # Write book data
+        for book in data:
+            writer.writerow([
+                book.get("rank"),
+                book.get("title"),
+                book.get("author"),
+                book.get("publisher"),
+                book.get("description")
+            ])
+    print(f"Data successfully written to {filename}")
 
-    # Create a CSV file and write the data
-    with open('weather_data.csv', 'w', newline='') as csv_file:
-        fieldnames = ['Location', 'Temperature (°C)', 'Humidity (%)', 'Weather Description']
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+# Main script
+def main():
+    print("Fetching data from NYTimes Books API...")
+    books = fetch_best_sellers(API_KEY, CATEGORY)
+    if books:
+        print(f"Fetched {len(books)} books. Writing to CSV...")
+        write_to_csv(books, OUTPUT_FILE)
+    else:
+        print("No data available.")
 
-        # Write the header row
-        writer.writeheader()
-
-        # Write the data for the location
-        writer.writerow({
-            'Location': location,
-            'Temperature (°C)': temperature,
-            'Humidity (%)': humidity,
-            'Weather Description': weather_description
-        })
-
-    print(f"Data for {location} has been saved to 'weather_data.csv'")
-else:
-    print(f"Failed to retrieve data. Status code: {response.status_code}")
+if __name__ == "__main__":
+    main()
